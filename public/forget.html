@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TellHub - Forget Password</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="theme-color" content="#075e54">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-[#f0f2f5] text-[#111b21] flex items-center justify-center h-screen px-4 font-sans select-none">
+
+  <!-- Custom Alert Modal -->
+  <div id="customModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl border text-center">
+      <h3 id="modalTitle" class="font-bold text-lg text-[#075e54] mb-2">Notice</h3>
+      <p id="modalMessage" class="text-xs text-gray-600 mb-4"></p>
+      <button onclick="closeCustomModal()" class="bg-[#075e54] text-white px-5 py-2 rounded-xl text-xs font-bold">OK</button>
+    </div>
+  </div>
+
+  <div class="w-full max-w-sm bg-white p-6 rounded-2xl shadow-xl border border-gray-100 text-center">
+    <div class="w-16 h-16 bg-[#075e54] text-white rounded-full mx-auto flex items-center justify-center text-2xl font-bold mb-3 shadow-md">
+      <i class="fa-solid fa-key"></i>
+    </div>
+    <h2 class="text-xl font-bold mb-1 text-gray-800">Reset Password</h2>
+    <p class="text-xs text-gray-400 mb-6">Answer security question to recover access</p>
+
+    <form onsubmit="handleReset(event)" class="space-y-3">
+      <input type="email" id="resetEmail" placeholder="Email Address" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl outline-none text-xs focus:border-[#075e54]">
+      <input type="text" id="resetAnswer" placeholder="Security Answer (Favorite Color?)" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl outline-none text-xs focus:border-[#075e54]">
+      <input type="password" id="newPass" placeholder="New Password" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl outline-none text-xs focus:border-[#075e54]">
+      
+      <button type="submit" class="w-full bg-[#075e54] text-white font-bold py-2.5 rounded-xl text-xs shadow-md hover:bg-green-800 transition">
+        Update Password
+      </button>
+    </form>
+
+    <p class="text-xs text-gray-500 mt-4">
+      Remember password? <a href="login.html" class="text-[#075e54] font-bold">Back to Login</a>
+    </p>
+  </div>
+
+  <script>
+    function showAlert(title, msg) {
+      document.getElementById("modalTitle").innerText = title;
+      document.getElementById("modalMessage").innerText = msg;
+      document.getElementById("customModal").classList.remove("hidden");
+      document.getElementById("customModal").classList.add("flex");
+    }
+
+    function closeCustomModal() {
+      document.getElementById("customModal").classList.add("hidden");
+      document.getElementById("customModal").classList.remove("flex");
+    }
+
+    function handleReset(e) {
+      e.preventDefault();
+      const email = document.getElementById("resetEmail").value.trim().toLowerCase();
+      const ans = document.getElementById("resetAnswer").value.trim().toLowerCase();
+      const newPass = document.getElementById("newPass").value.trim();
+
+      const savedAns = localStorage.getItem(`sec_ans_${email}`);
+
+      if (!savedAns) {
+        return showAlert("Error", "No security details found for this email.");
+      }
+
+      if (ans === savedAns) {
+        const userData = JSON.parse(localStorage.getItem("user") || "{}");
+        if (userData.email === email) {
+          userData.password = newPass;
+          localStorage.setItem("user", JSON.stringify(userData));
+        }
+        showAlert("Success", "Password updated successfully!");
+        setTimeout(() => { window.location.href = "login.html"; }, 1000);
+      } else {
+        showAlert("Error", "Incorrect security answer.");
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TellHub - Sign Up</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="theme-color" content="#075e54">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-[#f0f2f5] text-[#111b21] flex items-center justify-center h-screen px-4 font-sans select-none">
+
+  <!-- Custom Offline Alert Modal -->
+  <div id="customModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl border text-center">
+      <h3 id="modalTitle" class="font-bold text-lg text-[#075e54] mb-2">Notice</h3>
+      <p id="modalMessage" class="text-xs text-gray-600 mb-4"></p>
+      <button onclick="closeCustomModal()" class="bg-[#075e54] text-white px-5 py-2 rounded-xl text-xs font-bold">OK</button>
+    </div>
+  </div>
+
+  <div class="w-full max-w-sm bg-white p-6 rounded-2xl shadow-xl border border-gray-100 text-center">
+    <div class="w-16 h-16 bg-[#075e54] text-white rounded-full mx-auto flex items-center justify-center text-2xl font-bold mb-3 shadow-md">
+      TH
+    </div>
+    <h2 class="text-xl font-bold mb-1 text-gray-800">Create Account</h2>
+    <p class="text-xs text-gray-400 mb-6">Sign up to start chatting on TellHub</p>
+
+    <form onsubmit="handleSignup(event)" class="space-y-3">
+      <input type="text" id="signupName" placeholder="Full Name" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl outline-none text-xs focus:border-[#075e54]">
+      <input type="email" id="signupEmail" placeholder="Email Address" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl outline-none text-xs focus:border-[#075e54]">
+      <input type="password" id="signupPassword" placeholder="Password" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl outline-none text-xs focus:border-[#075e54]">
+      <input type="text" id="securityAnswer" placeholder="Security Question: Favorite Color?" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl outline-none text-xs focus:border-[#075e54]">
+      
+      <button type="submit" class="w-full bg-[#075e54] text-white font-bold py-2.5 rounded-xl text-xs shadow-md hover:bg-green-800 transition">
+        Register & Continue
+      </button>
+    </form>
+
+    <p class="text-xs text-gray-500 mt-4">
+      Already have an account? <a href="login.html" class="text-[#075e54] font-bold">Login</a>
+    </p>
+  </div>
+
+  <script>
+    function showAlert(title, msg) {
+      document.getElementById("modalTitle").innerText = title;
+      document.getElementById("modalMessage").innerText = msg;
+      document.getElementById("customModal").classList.remove("hidden");
+      document.getElementById("customModal").classList.add("flex");
+    }
+
+    function closeCustomModal() {
+      document.getElementById("customModal").classList.add("hidden");
+      document.getElementById("customModal").classList.remove("flex");
+    }
+
+    function handleSignup(e) {
+      e.preventDefault();
+      const name = document.getElementById("signupName").value.trim();
+      const email = document.getElementById("signupEmail").value.trim().toLowerCase();
+      const password = document.getElementById("signupPassword").value.trim();
+      const secAns = document.getElementById("securityAnswer").value.trim().toLowerCase();
+
+      if (!name || !email || !password || !secAns) {
+        return showAlert("Error", "All fields are required.");
+      }
+
+      const userData = { name, email, password };
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem(`sec_ans_${email}`, secAns);
+
+      showAlert("Success", "Account created successfully!");
+      setTimeout(() => {
+        window.location.href = "verify.html";
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

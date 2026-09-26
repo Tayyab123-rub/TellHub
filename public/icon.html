@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h3>Generating Icons...</h3>
+  <script>
+    function generateIcon(size, filename) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Green Background (WhatsApp Style)
+      ctx.fillStyle = '#075e54';
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // White Text "TH"
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${size * 0.4}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('TH', size / 2, size / 2);
+
+      // Auto Download
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Auto download both sizes
+    window.onload = () => {
+      generateIcon(192, 'icon-192.png');
+      setTimeout(() => generateIcon(512, 'icon-512.png'), 500);
+    };
+  </script>
+</body>
+</html>

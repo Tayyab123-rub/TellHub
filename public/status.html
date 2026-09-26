@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TellHub - Status View</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="theme-color" content="#000000">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @keyframes progress {
+      from { width: 0%; }
+      to { width: 100%; }
+    }
+    .animate-progress {
+      animation: progress 5s linear forwards;
+    }
+  </style>
+</head>
+<body id="statusBody" class="bg-gradient-to-r from-teal-800 to-emerald-900 text-white h-screen flex flex-col justify-between items-center relative font-sans select-none overflow-hidden">
+
+  <!-- Viewers Modal -->
+  <div id="viewersModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 px-4">
+    <div class="bg-white text-gray-800 rounded-2xl p-5 max-w-xs w-full shadow-2xl border text-center">
+      <h3 class="font-bold text-base text-[#075e54] mb-3 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-eye text-sm"></i> Viewed by
+      </h3>
+      <div id="viewersList" class="max-h-48 overflow-y-auto space-y-2 mb-4 text-xs"></div>
+      <button onclick="closeViewersModal()" class="bg-[#075e54] text-white px-5 py-2 rounded-xl text-xs font-bold w-full">Close</button>
+    </div>
+  </div>
+
+  <div class="w-full max-w-md h-full flex flex-col justify-between p-4 relative">
+    
+    <!-- Top Bar with Progress Bar & User Header -->
+    <div class="w-full space-y-3 z-10">
+      <div class="w-full bg-white/30 h-1.5 rounded-full overflow-hidden">
+        <div id="progressBar" class="bg-white h-full animate-progress"></div>
+      </div>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <a href="home.html" class="text-white text-lg hover:text-gray-300"><i class="fa-solid fa-arrow-left"></i></a>
+          <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm border border-white/40" id="statusAvatar">U</div>
+          <div>
+            <h4 class="font-bold text-sm" id="statusUser">User Status</h4>
+            <p class="text-[10px] text-gray-200" id="statusTime">Just now</p>
+          </div>
+        </div>
+        <!-- Status Delete Action Button -->
+        <button id="deleteStatusBtn" onclick="deleteCurrentStatus()" class="hidden text-white/80 hover:text-red-400 p-2 text-base transition">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status Content Display Area -->
+    <div class="flex-1 flex items-center justify-center text-center p-6 my-auto">
+      <p id="statusText" class="text-2xl font-extrabold leading-relaxed text-white drop-shadow-md">Hello everyone! Using TellHub Messenger.</p>
+    </div>
+
+    <!-- Views Counter Section -->
+    <div class="w-full text-center pb-6 z-10">
+      <button onclick="showViewersModal()" class="inline-flex items-center space-x-2 bg-black/40 hover:bg-black/60 px-4 py-2 rounded-full backdrop-blur-md transition border border-white/20">
+        <i class="fa-solid fa-eye text-xs text-white"></i>
+        <span id="viewCount" class="text-xs font-bold">1 View</span>
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const viewingStatus = JSON.parse(localStorage.getItem("viewing_status") || "null");
+
+    let isMyOwnStatus = false;
+
+    if (viewingStatus) {
+      document.getElementById("statusUser").innerText = viewingStatus.userName || "TellHub User";
+      document.getElementById("statusAvatar").innerText = (viewingStatus.userName || "U").charAt(0).toUpperCase();
+      document.getElementById("statusText").innerText = viewingStatus.content || "";
+      if (viewingStatus.bgColor) {
+        document.getElementById("statusBody").className = `${viewingStatus.bgColor} text-white h-screen flex flex-col justify-between items-center relative font-sans select-none overflow-hidden`;
+      }
+      if (viewingStatus.createdAt) {
+        document.getElementById("statusTime").innerText = new Date(viewingStatus.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      }
+      if (viewingStatus.userEmail === user.email) {
+        isMyOwnStatus = true;
+      }
+    } else {
+      isMyOwnStatus = true;
+      const myStatus = localStorage.getItem(`latest_status_${user.email}`);
+      const bg = localStorage.getItem(`latest_status_bg_${user.email}`);
+      if (bg) {
+        document.getElementById("statusBody").className = `${bg} text-white h-screen flex flex-col justify-between items-center relative font-sans select-none overflow-hidden`;
+      }
+      document.getElementById("statusUser").innerText = user.name || "My Status";
+      document.getElementById("statusAvatar").innerText = (user.name || "U").charAt(0).toUpperCase();
+      document.getElementById("statusText").innerText = myStatus || "Hello everyone! Using TellHub Messenger.";
+    }
+
+    if (isMyOwnStatus) {
+      document.getElementById("deleteStatusBtn").classList.remove("hidden");
+    }
+
+    // Fixed Views Counter & Viewers List System
+    const ownerEmail = viewingStatus ? viewingStatus.userEmail : user.email;
+    const viewersListKey = `status_viewers_${ownerEmail}`;
+    let viewersList = JSON.parse(localStorage.getItem(viewersListKey) || "[]");
+
+    const currentViewerName = user.name || "Guest User";
+    if (!viewersList.includes(currentViewerName)) {
+      viewersList.push(currentViewerName);
+      localStorage.setItem(viewersListKey, JSON.stringify(viewersList));
+    }
+
+    document.getElementById("viewCount").innerText = `${viewersList.length} ${viewersList.length === 1 ? 'View' : 'Views'}`;
+
+    function showViewersModal() {
+      const listDiv = document.getElementById("viewersList");
+      listDiv.innerHTML = "";
+      if (viewersList.length === 0) {
+        listDiv.innerHTML = `<p class="text-gray-400 py-2">No views yet.</p>`;
+      } else {
+        viewersList.forEach(v => {
+          const item = document.createElement("div");
+          item.className = "p-2 bg-gray-100 rounded-lg font-bold text-gray-700 text-left flex items-center gap-2";
+          item.innerHTML = `<i class="fa-solid fa-circle-user text-[#075e54] text-sm"></i> ${v}`;
+          listDiv.appendChild(item);
+        });
+      }
+      document.getElementById("viewersModal").classList.remove("hidden");
+      document.getElementById("viewersModal").classList.add("flex");
+    }
+
+    function closeViewersModal() {
+      document.getElementById("viewersModal").classList.add("hidden");
+      document.getElementById("viewersModal").classList.remove("flex");
+    }
+
+    function deleteCurrentStatus() {
+      if (confirm("Are you sure you want to delete this status?")) {
+        localStorage.removeItem(`latest_status_${user.email}`);
+        localStorage.removeItem(`latest_status_bg_${user.email}`);
+        localStorage.removeItem(`status_viewers_${user.email}`);
+        localStorage.removeItem("viewing_status");
+        window.location.href = "home.html";
+      }
+    }
+
+    // Redirect to home after 5 seconds
+    setTimeout(() => {
+      localStorage.removeItem("viewing_status");
+      window.location.href = "home.html";
+    }, 5000);
+  </script>
+</body>
+</html>

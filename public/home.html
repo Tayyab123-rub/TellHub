@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TellHub - Home</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-512.png">
+  <meta name="theme-color" content="#075e54">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-[#f0f2f5] text-[#111b21] h-screen flex justify-center items-center select-none font-sans">
+
+  <!-- Custom Modal -->
+  <div id="customModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl border text-center">
+      <h3 id="modalTitle" class="font-bold text-lg text-[#075e54] mb-2">Notice</h3>
+      <p id="modalMessage" class="text-xs text-gray-600 mb-4"></p>
+      <div id="modalInputs" class="space-y-2 mb-4 hidden"></div>
+      <div class="flex justify-center gap-2 flex-wrap" id="modalButtons">
+        <button onclick="closeCustomModal()" class="bg-[#075e54] text-white px-5 py-2 rounded-xl text-xs font-bold">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="w-full max-w-md bg-white border border-gray-200 h-full flex flex-col shadow-lg relative overflow-hidden">
+    
+    <!-- WhatsApp Header -->
+    <div class="bg-[#075e54] text-white p-3 flex justify-between items-center shadow-md">
+      <div class="flex items-center space-x-2">
+        <div class="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm border border-white/30" id="headerAvatar">T</div>
+        <div>
+          <h1 class="font-bold text-base leading-tight" id="appName">TellHub</h1>
+          <p class="text-[10px] text-green-100 flex items-center gap-1">
+            <span id="netStatusDot" class="w-2 h-2 bg-green-400 rounded-full inline-block"></span>
+            <span id="netStatusText">Online</span>
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button onclick="toggleSearch()" class="p-2 hover:bg-white/10 rounded-full text-sm"><i class="fa-solid fa-magnifying-glass"></i></button>
+        <button onclick="toggleSidebar()" class="p-2 hover:bg-white/10 rounded-full text-sm"><i class="fa-solid fa-bars"></i></button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-[#075e54] flex text-white font-bold text-xs border-t border-white/10">
+      <button onclick="switchTab('chats')" id="tabChats" class="flex-1 py-3 text-center border-b-2 border-white">CHATS</button>
+      <button onclick="switchTab('status')" id="tabStatus" class="flex-1 py-3 text-center text-white/70 hover:text-white">STATUS</button>
+      <button onclick="switchTab('calls')" id="tabCalls" class="flex-1 py-3 text-center text-white/70 hover:text-white">CALLS</button>
+    </div>
+
+    <!-- Search Bar -->
+    <div id="searchBox" class="hidden p-2 bg-[#f0f2f5] border-b border-gray-200">
+      <div class="bg-white flex items-center px-3 py-1.5 rounded-xl border border-gray-200">
+        <i class="fa-solid fa-magnifying-glass text-gray-400 text-xs mr-2"></i>
+        <input type="text" id="searchInput" placeholder="Search chats or contacts..." oninput="filterActiveChats()" class="w-full text-xs outline-none bg-transparent">
+      </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-3 relative" id="mainContainer">
+      <div id="chatsList" class="space-y-2"></div>
+      <div id="statusList" class="hidden space-y-3"></div>
+      <div id="callsList" class="hidden space-y-2"></div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button id="fabBtn" onclick="handleFabAction()" class="absolute bottom-5 right-5 w-12 h-12 bg-[#25d366] text-white rounded-full shadow-xl flex items-center justify-center text-xl hover:bg-green-600 transition">
+      <i id="fabIcon" class="fa-solid fa-message"></i>
+    </button>
+
+    <!-- Sidebar Overlay & Menu -->
+    <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/40 hidden z-40"></div>
+    <div id="sidebar" class="absolute top-0 right-0 w-64 h-full bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col justify-between">
+      <div>
+        <div class="bg-[#075e54] p-5 text-white flex justify-between items-start">
+          <div>
+            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center font-bold text-lg mb-2" id="sideAvatar">U</div>
+            <h3 class="font-bold text-sm" id="sideName">User Name</h3>
+            <p class="text-xs text-green-100" id="sideEmail">user@mail.com</p>
+          </div>
+          <button onclick="toggleSidebar()" class="text-white/80 hover:text-white p-1">
+            <i class="fa-solid fa-arrow-right text-lg"></i>
+          </button>
+        </div>
+        <div class="p-2 space-y-1 text-sm font-medium text-gray-700">
+          <button onclick="setupSecurityQuestion()" class="w-full text-left p-3 hover:bg-gray-100 rounded-xl flex items-center gap-3">
+            <i class="fa-solid fa-shield-halved text-[#075e54]"></i> Security Settings
+          </button>
+          <button onclick="resetSecurityQuestionPrompt()" class="w-full text-left p-3 hover:bg-gray-100 rounded-xl flex items-center gap-3 text-amber-600">
+            <i class="fa-solid fa-key"></i> Forgot Security Question
+          </button>
+          <button onclick="clearAllData()" class="w-full text-left p-3 hover:bg-gray-100 rounded-xl flex items-center gap-3 text-red-500">
+            <i class="fa-solid fa-trash"></i> Clear App Data
+          </button>
+        </div>
+      </div>
+      <div class="p-4 border-t border-gray-100">
+        <button onclick="logout()" class="w-full bg-red-50 text-red-600 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+
+    if (!currentUser) {
+      window.location.href = "login.html";
+    }
+
+    document.getElementById("sideName").innerText = currentUser.name || "User";
+    document.getElementById("sideEmail").innerText = currentUser.email || "";
+    document.getElementById("sideAvatar").innerText = (currentUser.name || "U").charAt(0).toUpperCase();
+    document.getElementById("headerAvatar").innerText = (currentUser.name || "T").charAt(0).toUpperCase();
+
+    let activeChatsList = [];
+    let activeTab = 'chats';
+
+    function openCustomAlert(title, message, inputs = [], onConfirm = null, extraBtn = null) {
+      document.getElementById("modalTitle").innerText = title;
+      document.getElementById("modalMessage").innerText = message;
+      const inputsDiv = document.getElementById("modalInputs");
+      inputsDiv.innerHTML = "";
+      if (inputs.length > 0) {
+        inputsDiv.classList.remove("hidden");
+        inputs.forEach(inp => {
+          if (inp.type === 'select') {
+            const selectEl = document.createElement("select");
+            selectEl.id = inp.id;
+            selectEl.className = "w-full border border-gray-300 p-2 rounded-xl text-xs outline-none focus:border-[#075e54]";
+            inp.options.forEach(opt => {
+              const o = document.createElement("option");
+              o.value = opt.value;
+              o.innerText = opt.label;
+              selectEl.appendChild(o);
+            });
+            inputsDiv.appendChild(selectEl);
+          } else {
+            const inputEl = document.createElement("input");
+            inputEl.type = inp.type || "text";
+            inputEl.id = inp.id;
+            inputEl.placeholder = inp.placeholder || "";
+            inputEl.className = "w-full border border-gray-300 p-2 rounded-xl text-xs outline-none focus:border-[#075e54]";
+            inputsDiv.appendChild(inputEl);
+          }
+        });
+      } else { inputsDiv.classList.add("hidden"); }
+
+      const btnContainer = document.getElementById("modalButtons");
+      btnContainer.innerHTML = "";
+
+      if (extraBtn) {
+        const extBtn = document.createElement("button");
+        extBtn.innerText = extraBtn.text;
+        extBtn.className = "bg-amber-500 text-white px-3 py-2 rounded-xl text-xs font-bold";
+        extBtn.onclick = () => { closeCustomModal(); extraBtn.action(); };
+        btnContainer.appendChild(extBtn);
+      }
+
+      if (onConfirm) {
+        const cancelBtn = document.createElement("button");
+        cancelBtn.innerText = "Cancel";
+        cancelBtn.className = "bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-xs font-bold";
+        cancelBtn.onclick = closeCustomModal;
+
+        const confirmBtn = document.createElement("button");
+        confirmBtn.innerText = "Submit";
+        confirmBtn.className = "bg-[#075e54] text-white px-3 py-2 rounded-xl text-xs font-bold";
+        confirmBtn.onclick = () => { onConfirm(); closeCustomModal(); };
+
+        btnContainer.appendChild(cancelBtn);
+        btnContainer.appendChild(confirmBtn);
+      } else if (!extraBtn) {
+        const okBtn = document.createElement("button");
+        okBtn.innerText = "OK";
+        okBtn.className = "bg-[#075e54] text-white px-5 py-2 rounded-xl text-xs font-bold";
+        okBtn.onclick = closeCustomModal;
+        btnContainer.appendChild(okBtn);
+      }
+      document.getElementById("customModal").classList.remove("hidden");
+      document.getElementById("customModal").classList.add("flex");
+    }
+
+    function closeCustomModal() {
+      document.getElementById("customModal").classList.add("hidden");
+      document.getElementById("customModal").classList.remove("flex");
+    }
+
+    function toggleSearch() {
+      document.getElementById("searchBox").classList.toggle("hidden");
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("translate-x-full");
+      document.getElementById("sidebarOverlay").classList.toggle("hidden");
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      ['Chats', 'Status', 'Calls'].forEach(t => {
+        const el = document.getElementById(`tab${t}`);
+        if (t.toLowerCase() === tab) {
+          el.className = "flex-1 py-3 text-center border-b-2 border-white font-bold opacity-100";
+        } else {
+          el.className = "flex-1 py-3 text-center text-white/70 hover:text-white font-bold opacity-70";
+        }
+      });
+
+      document.getElementById("chatsList").classList.toggle("hidden", tab !== 'chats');
+      document.getElementById("statusList").classList.toggle("hidden", tab !== 'status');
+      document.getElementById("callsList").classList.toggle("hidden", tab !== 'calls');
+
+      const fabIcon = document.getElementById("fabIcon");
+      if (tab === 'chats') {
+        fabIcon.className = "fa-solid fa-message";
+      } else if (tab === 'status') {
+        fabIcon.className = "fa-solid fa-camera";
+      } else {
+        fabIcon.className = "fa-solid fa-phone-plus";
+      }
+
+      if (tab === 'chats') loadActiveConversations();
+      if (tab === 'status') loadStatuses();
+      if (tab === 'calls') loadCallsHistory();
+    }
+
+    function handleFabAction() {
+      if (activeTab === 'chats') {
+        window.location.href = 'addNew.html';
+      } else if (activeTab === 'status') {
+        postStatus();
+      } else {
+        openCustomAlert("Calls", "Start a call from any active chat.");
+      }
+    }
+
+    async function loadActiveConversations() {
+      try {
+        const res = await fetch(`${API_BASE}/api/conversations?email=${currentUser.email}`);
+        const data = await res.json();
+        if (data.success) {
+          const allSavedContacts = JSON.parse(localStorage.getItem(`contacts_${currentUser.email}`) || "[]");
+          activeChatsList = data.activeChats.map(c => {
+            const matchedContact = allSavedContacts.find(sc => sc.email === c.email);
+            return {
+              email: c.email,
+              name: matchedContact ? matchedContact.name : c.email.split('@')[0],
+              lastMessage: c.lastMessage,
+              timestamp: c.timestamp,
+              isLocked: matchedContact ? !!matchedContact.isLocked : false
+            };
+          });
+          renderChats(activeChatsList);
+        }
+      } catch (e) {
+        renderChats([]);
+      }
+    }
+
+    function renderChats(list) {
+      const container = document.getElementById("chatsList");
+      container.innerHTML = "";
+      if (list.length === 0) {
+        container.innerHTML = `<p class="p-6 text-center text-xs text-gray-400">No active chats yet. Click message button to start a chat.</p>`;
+        return;
+      }
+      list.forEach((c) => {
+        const div = document.createElement("div");
+        div.className = "p-3 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition mb-2";
+        // Directly triggers Chat ONLY
+        div.onclick = () => openChat(c.email, c.name, c.isLocked);
+        div.innerHTML = `
+          <div class="flex items-center space-x-3 flex-1">
+            <div class="w-11 h-11 bg-[#075e54] text-white rounded-full flex items-center justify-center font-bold text-sm">
+              ${c.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h4 class="font-bold text-sm text-gray-800 flex items-center gap-1">
+                ${c.name}
+                ${c.isLocked ? '<i class="fa-solid fa-lock text-xs text-amber-500"></i>' : ''}
+              </h4>
+              <p class="text-xs text-gray-500 truncate">${c.isLocked ? '🔒 Message Locked' : c.lastMessage}</p>
+            </div>
+          </div>
+          <button onclick="event.stopPropagation(); toggleLockContact('${c.email}')" class="p-2 text-gray-400 hover:text-amber-500">
+            <i class="fa-solid ${c.isLocked ? 'fa-lock' : 'fa-lock-open'} text-xs"></i>
+          </button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function openChat(email, name, isLocked) {
+      localStorage.setItem("activeChatEmail", email);
+      localStorage.setItem("activeChatName", name);
+
+      if (isLocked) {
+        const secAns = localStorage.getItem(`sec_ans_${currentUser.email}`);
+        openCustomAlert(
+          "Locked Chat", 
+          `Enter security answer to unlock:`, 
+          [{ id: "passAns", type: "password" }], 
+          () => {
+            if (document.getElementById("passAns").value.trim().toLowerCase() === secAns) {
+              window.location.href = "chat.html";
+            } else {
+              openCustomAlert("Denied", "Wrong security answer!");
+            }
+          },
+          { text: "Forgot Answer?", action: resetSecurityQuestionPrompt }
+        );
+      } else {
+        window.location.href = "chat.html";
+      }
+    }
+
+    async function loadStatuses() {
+      const container = document.getElementById("statusList");
+      const localStatus = localStorage.getItem(`latest_status_${currentUser.email}`);
+
+      let myStatusHTML = `
+        <div class="p-3 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer" onclick="${localStatus ? "openMyStatus()" : "postStatus()"}">
+          <div class="flex items-center space-x-3">
+            <div class="relative">
+              <div class="w-12 h-12 bg-[#075e54] text-white rounded-full flex items-center justify-center font-bold text-base border-2 border-[#25d366]">
+                ${(currentUser.name || "U").charAt(0).toUpperCase()}
+              </div>
+              ${!localStatus ? '<span class="absolute bottom-0 right-0 bg-[#25d366] text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold border border-white">+</span>' : ''}
+            </div>
+            <div>
+              <h4 class="font-bold text-sm text-gray-800">My Status</h4>
+              <p class="text-xs text-gray-500">${localStatus ? 'Tap to view status update' : 'Tap to add status update'}</p>
+            </div>
+          </div>
+        </div>
+        <p class="text-xs font-bold text-gray-500 pt-2 px-1">Recent updates</p>
+      `;
+
+      container.innerHTML = myStatusHTML;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/statuses`);
+        const data = await res.json();
+        if (data.success && data.statuses.length > 0) {
+          data.statuses.forEach(s => {
+            const div = document.createElement("div");
+            div.className = "p-3 bg-white rounded-xl border border-gray-100 flex items-center space-x-3 cursor-pointer hover:bg-gray-50";
+            div.onclick = () => viewStatusDetails(s);
+            div.innerHTML = `
+              <div class="w-10 h-10 bg-[#075e54] text-white rounded-full flex items-center justify-center font-bold text-xs border-2 border-green-500">
+                ${s.userName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h4 class="font-bold text-xs text-gray-800">${s.userName}</h4>
+                <p class="text-[10px] text-gray-400">${new Date(s.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+              </div>
+            `;
+            container.appendChild(div);
+          });
+        } else {
+          container.innerHTML += `<p class="text-center text-xs text-gray-400 py-4">No recent status updates.</p>`;
+        }
+      } catch (e) {
+        container.innerHTML += `<p class="text-center text-xs text-gray-400 py-4">No recent status updates.</p>`;
+      }
+    }
+
+    function openMyStatus() {
+      const myStatus = localStorage.getItem(`latest_status_${currentUser.email}`);
+      const bg = localStorage.getItem(`latest_status_bg_${currentUser.email}`) || "bg-gradient-to-r from-teal-700 to-emerald-800";
+      const myStatusObj = {
+        userEmail: currentUser.email,
+        userName: currentUser.name || "My Status",
+        content: myStatus,
+        bgColor: bg,
+        createdAt: new Date().toISOString()
+      };
+      localStorage.setItem("viewing_status", JSON.stringify(myStatusObj));
+      window.location.href = "status.html";
+    }
+
+    function viewStatusDetails(status) {
+      localStorage.setItem("viewing_status", JSON.stringify(status));
+      window.location.href = "status.html";
+    }
+
+    function postStatus() {
+      openCustomAlert(
+        "New Status", 
+        "Type status & choose background color:", 
+        [
+          { id: "stTxt", placeholder: "Type a status..." },
+          { id: "stBg", type: "select", options: [
+            { value: "bg-gradient-to-r from-teal-700 to-emerald-800", label: "Green Theme" },
+            { value: "bg-gradient-to-r from-blue-700 to-indigo-800", label: "Blue Theme" },
+            { value: "bg-gradient-to-r from-purple-700 to-pink-800", label: "Purple Theme" },
+            { value: "bg-gradient-to-r from-rose-700 to-red-800", label: "Crimson Theme" },
+            { value: "bg-gradient-to-r from-gray-800 to-slate-900", label: "Dark Gray" }
+          ]}
+        ], 
+        async () => {
+          const txt = document.getElementById("stTxt").value.trim();
+          const bg = document.getElementById("stBg").value;
+          if (!txt) return;
+          localStorage.setItem(`latest_status_${currentUser.email}`, txt);
+          localStorage.setItem(`latest_status_bg_${currentUser.email}`, bg);
+          try {
+            await fetch(`${API_BASE}/api/add-status`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ userEmail: currentUser.email, userName: currentUser.name, content: txt, bgColor: bg })
+            });
+          } catch(e) {}
+          loadStatuses();
+        }
+      );
+    }
+
+    async function loadCallsHistory() {
+      const container = document.getElementById("callsList");
+      container.innerHTML = "";
+      try {
+        const res = await fetch(`${API_BASE}/api/call-history?email=${currentUser.email}`);
+        const data = await res.json();
+        if (data.success && data.calls.length > 0) {
+          data.calls.forEach(c => {
+            const isCaller = c.callerEmail === currentUser.email;
+            const target = isCaller ? c.receiverName : c.callerName;
+            const div = document.createElement("div");
+            div.className = "p-3 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-between text-xs mb-2";
+            div.innerHTML = `
+              <div class="flex items-center space-x-3">
+                <i class="fa-solid ${c.callType === 'Video' ? 'fa-video' : 'fa-phone'} text-[#075e54]"></i>
+                <div>
+                  <h4 class="font-bold text-gray-800">${target}</h4>
+                  <span class="text-[10px] text-gray-400">${new Date(c.timestamp).toLocaleString()}</span>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.status==='Answered'?'bg-green-100 text-green-700':'bg-red-100 text-red-600'}">${c.status}</span>
+            `;
+            container.appendChild(div);
+          });
+        } else {
+          container.innerHTML = `<p class="p-6 text-center text-xs text-gray-400">No call history.</p>`;
+        }
+      } catch (e) {
+        container.innerHTML = `<p class="p-6 text-center text-xs text-gray-400">No call history.</p>`;
+      }
+    }
+
+    function resetSecurityQuestionPrompt() {
+      openCustomAlert(
+        "Reset Security Answer", 
+        "Enter your account password to set a new security answer:", 
+        [
+          { id: "accountPass", type: "password", placeholder: "Account Password" },
+          { id: "newSecAns", placeholder: "New Security Answer" }
+        ], 
+        () => {
+          const pass = document.getElementById("accountPass").value.trim();
+          const newAns = document.getElementById("newSecAns").value.trim().toLowerCase();
+          if (currentUser.password && pass !== currentUser.password) {
+            openCustomAlert("Error", "Incorrect account password!");
+            return;
+          }
+          if (newAns) {
+            localStorage.setItem(`sec_ans_${currentUser.email}`, newAns);
+            openCustomAlert("Success", "Security answer has been reset successfully.");
+          }
+        }
+      );
+    }
+
+    function toggleLockContact(targetEmail) {
+      const secAns = localStorage.getItem(`sec_ans_${currentUser.email}`);
+      if (!secAns) return openCustomAlert("Security Required", "Set security question in side menu first.");
+      const key = `contacts_${currentUser.email}`;
+      let contacts = JSON.parse(localStorage.getItem(key) || "[]");
+      let idx = contacts.findIndex(c => c.email === targetEmail);
+      if (idx === -1) {
+        contacts.push({ name: targetEmail.split('@')[0], email: targetEmail, isLocked: true });
+      } else {
+        contacts[idx].isLocked = !contacts[idx].isLocked;
+      }
+      localStorage.setItem(key, JSON.stringify(contacts));
+      loadActiveConversations();
+    }
+
+    function setupSecurityQuestion() {
+      toggleSidebar();
+      openCustomAlert("Security Question", "Set answer to unlock chats:", [{ id: "sqAns", placeholder: "Answer" }], () => {
+        const ans = document.getElementById("sqAns").value.trim().toLowerCase();
+        if (ans) {
+          localStorage.setItem(`sec_ans_${currentUser.email}`, ans);
+          openCustomAlert("Saved", "Security answer set successfully.");
+        }
+      });
+    }
+
+    function filterActiveChats() {
+      const q = document.getElementById("searchInput").value.toLowerCase();
+      const filtered = activeChatsList.filter(c => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q));
+      renderChats(filtered);
+    }
+
+    function clearAllData() { localStorage.clear(); window.location.href = "login.html"; }
+    function logout() { localStorage.removeItem("user"); window.location.href = "login.html"; }
+
+    loadActiveConversations();
+  </script>
+</body>
+</html>

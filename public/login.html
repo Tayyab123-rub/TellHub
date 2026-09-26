@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TellHub - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#075e54">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-[#efeae2] text-[#111b21] flex justify-center items-center h-screen relative select-none font-sans">
+
+  <div id="customModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl border text-center">
+      <h3 id="modalTitle" class="font-bold text-lg text-[#075e54] mb-2">Alert</h3>
+      <p id="modalMessage" class="text-xs text-gray-600 mb-4"></p>
+      <button onclick="closeCustomModal()" class="bg-[#075e54] text-white px-5 py-2 rounded-xl text-xs font-bold">OK</button>
+    </div>
+  </div>
+
+  <div class="w-full max-w-md bg-white p-6 rounded-2xl shadow-xl border border-gray-100 mx-4">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-[#075e54] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-2 shadow-md">
+        <i class="fa-solid fa-comments"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-[#075e54]">TellHub Login</h2>
+      <p class="text-xs text-gray-500 mt-1">Welcome back! Please enter your details.</p>
+    </div>
+
+    <form onsubmit="handleLogin(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Email Address</label>
+        <input type="email" id="email" required placeholder="example@mail.com" class="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs outline-none focus:border-[#075e54]">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Password</label>
+        <input type="password" id="password" required placeholder="••••••••" class="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs outline-none focus:border-[#075e54]">
+      </div>
+
+      <div class="flex justify-end">
+        <a href="forget.html" class="text-xs text-[#075e54] font-semibold hover:underline">Forgot Password?</a>
+      </div>
+
+      <button type="submit" id="submitBtn" class="w-full bg-[#075e54] text-white py-3 rounded-xl text-xs font-bold shadow-md hover:bg-green-800 transition">
+        Login
+      </button>
+    </form>
+
+    <div class="text-center mt-6 pt-4 border-t border-gray-100">
+      <p class="text-xs text-gray-600">
+        Don't have an account? 
+        <a href="signup.html" class="text-[#075e54] font-bold hover:underline ml-1">Sign Up</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "https://tellhub.loca.lt";
+
+    function openCustomAlert(title, message) {
+      document.getElementById("modalTitle").innerText = title;
+      document.getElementById("modalMessage").innerText = message;
+      document.getElementById("customModal").classList.remove("hidden");
+      document.getElementById("customModal").classList.add("flex");
+    }
+
+    function closeCustomModal() {
+      document.getElementById("customModal").classList.add("hidden");
+      document.getElementById("customModal").classList.remove("flex");
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const password = document.getElementById("password").value;
+      const btn = document.getElementById("submitBtn");
+
+      btn.disabled = true;
+      btn.innerText = "Logging in...";
+
+      try {
+        const res = await fetch(`${API_BASE}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+          window.location.href = "home.html";
+        } else {
+          openCustomAlert("Login Failed", data.message);
+        }
+      } catch (err) {
+        openCustomAlert("Error", "Could not connect to server. Please check internet connection.");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Login";
+      }
+    }
+  </script>
+</body>
+</html>

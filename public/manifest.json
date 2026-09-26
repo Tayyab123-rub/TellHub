@@ -1,0 +1,17 @@
+{
+  "short_name": "TellHub",
+  "name": "TellHub Messaging App",
+  "description": "Direct Chat and Calling Web App",
+  "icons": [
+  {
+    "src": "/icon-512.png",
+    "type": "image/png",
+    "sizes": "192x192 512x512",
+    "purpose": "any maskable"
+  }
+],
+  "start_url": "/home.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#075e54"
+}

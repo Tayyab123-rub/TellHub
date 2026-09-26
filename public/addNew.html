@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TellHub - Select Contact</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="theme-color" content="#075e54">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-[#f0f2f5] text-[#111b21] flex justify-center h-screen items-center px-4 font-sans select-none">
+
+  <div id="customModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl border text-center">
+      <h3 id="modalTitle" class="font-bold text-lg text-[#075e54] mb-2">Notice</h3>
+      <p id="modalMessage" class="text-xs text-gray-600 mb-4"></p>
+      <button onclick="closeCustomModal()" class="bg-[#075e54] text-white px-5 py-2 rounded-xl text-xs font-bold">OK</button>
+    </div>
+  </div>
+
+  <div class="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden flex flex-col h-[90vh]">
+    <div class="bg-[#075e54] text-white p-4 flex items-center space-x-3">
+      <a href="home.html" class="text-white"><i class="fa-solid fa-arrow-left"></i></a>
+      <div>
+        <h1 class="font-bold text-base">Select Contact</h1>
+        <p class="text-[11px] text-green-100" id="contactCount">0 contacts</p>
+      </div>
+    </div>
+
+    <!-- Form to Add New Contact -->
+    <div class="p-4 bg-gray-50 border-b border-gray-200">
+      <form onsubmit="saveContact(event)" class="space-y-3">
+        <h3 class="text-xs font-bold text-[#075e54] uppercase tracking-wider">Add New Contact</h3>
+        <input type="email" id="contactEmail" placeholder="Enter email address" required class="w-full bg-white border border-gray-200 text-gray-800 px-3 py-2 rounded-xl outline-none text-xs focus:border-[#075e54]">
+        <input type="text" id="contactName" placeholder="Enter contact name (Optional)" class="w-full bg-white border border-gray-200 text-gray-800 px-3 py-2 rounded-xl outline-none text-xs focus:border-[#075e54]">
+        <button type="submit" id="addBtn" class="w-full bg-[#075e54] text-white font-bold py-2 rounded-xl text-xs shadow-md hover:bg-green-800 transition">
+          Add & Start Chat
+        </button>
+      </form>
+    </div>
+
+    <!-- Saved Contacts List (Contacts with No Active Chat Yet) -->
+    <div class="p-3 bg-gray-100 border-b border-gray-200 text-xs font-bold text-gray-500">
+      ALL CONTACTS
+    </div>
+
+    <div class="flex-1 overflow-y-auto divide-y divide-gray-100" id="allContactsList">
+      <p class="p-4 text-center text-xs text-gray-400">Loading contacts...</p>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "https://tellhub.loca.lt";
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+    function showAlert(title, msg) {
+      document.getElementById("modalTitle").innerText = title;
+      document.getElementById("modalMessage").innerText = msg;
+      document.getElementById("customModal").classList.remove("hidden");
+      document.getElementById("customModal").classList.add("flex");
+    }
+
+    function closeCustomModal() {
+      document.getElementById("customModal").classList.add("hidden");
+      document.getElementById("customModal").classList.remove("flex");
+    }
+
+    async function loadAllContacts() {
+      const key = `contacts_${user.email}`;
+      let contacts = JSON.parse(localStorage.getItem(key) || "[]");
+
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(`${API_BASE}/api/contacts?email=${user.email}`);
+          const data = await res.json();
+          if (data.success && data.contacts) {
+            contacts = data.contacts.map(c => ({ name: c.contactName, email: c.contactEmail }));
+            localStorage.setItem(key, JSON.stringify(contacts));
+          }
+        } catch (e) {}
+      }
+
+      const listContainer = document.getElementById("allContactsList");
+      document.getElementById("contactCount").innerText = `${contacts.length} contacts`;
+      listContainer.innerHTML = "";
+
+      if (contacts.length === 0) {
+        listContainer.innerHTML = `<p class="p-6 text-center text-xs text-gray-400">No saved contacts. Add a new contact above.</p>`;
+        return;
+      }
+
+      contacts.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "p-3 flex items-center space-x-3 hover:bg-gray-50 cursor-pointer transition";
+        div.onclick = () => openChat(c.email, c.name);
+        div.innerHTML = `
+          <div class="w-10 h-10 bg-[#075e54] text-white rounded-full flex items-center justify-center font-bold text-xs">
+            ${c.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h4 class="font-bold text-xs text-gray-800">${c.name}</h4>
+            <p class="text-[11px] text-gray-400">${c.email}</p>
+          </div>
+        `;
+        listContainer.appendChild(div);
+      });
+    }
+
+    async function saveContact(e) {
+      e.preventDefault();
+      const email = document.getElementById("contactEmail").value.trim().toLowerCase();
+      const name = document.getElementById("contactName").value.trim();
+      const btn = document.getElementById("addBtn");
+
+      if (email === user.email) return showAlert("Notice", "You cannot add your own email address.");
+
+      btn.disabled = true;
+      btn.innerText = "Checking User...";
+
+      try {
+        const res = await fetch(`${API_BASE}/api/add-contact`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ myEmail: user.email, contactEmail: email, contactName: name })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          const key = `contacts_${user.email}`;
+          const contacts = JSON.parse(localStorage.getItem(key) || "[]");
+          const finalName = data.contact.contactName;
+          
+          if (!contacts.some(c => c.email === email)) {
+            contacts.push({ name: finalName, email: email, isLocked: false });
+            localStorage.setItem(key, JSON.stringify(contacts));
+          }
+
+          openChat(email, finalName);
+        } else {
+          // WhatsApp style error check for non-existing DB user
+          showAlert("User Not Found", data.message || "This user is not on TellHub.");
+        }
+      } catch (err) {
+        showAlert("Connection Error", "Server is unreachable. Please check internet connection.");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Add & Start Chat";
+      }
+    }
+
+    function openChat(email, name) {
+      localStorage.setItem("activeChatEmail", email);
+      localStorage.setItem("activeChatName", name);
+      window.location.href = "chat.html";
+    }
+
+    loadAllContacts();
+  </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TellHub - Verify</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="theme-color" content="#075e54">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-[#f0f2f5] text-[#111b21] flex items-center justify-center h-screen px-4 font-sans select-none">
+
+  <!-- Custom Alert Modal -->
+  <div id="customModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl border text-center">
+      <h3 id="modalTitle" class="font-bold text-lg text-[#075e54] mb-2">Notice</h3>
+      <p id="modalMessage" class="text-xs text-gray-600 mb-4"></p>
+      <button onclick="closeCustomModal()" class="bg-[#075e54] text-white px-5 py-2 rounded-xl text-xs font-bold">OK</button>
+    </div>
+  </div>
+
+  <div class="w-full max-w-sm bg-white p-6 rounded-2xl shadow-xl border border-gray-100 text-center">
+    <div class="w-16 h-16 bg-[#075e54] text-white rounded-full mx-auto flex items-center justify-center text-2xl font-bold mb-3 shadow-md">
+      <i class="fa-solid fa-shield-halved"></i>
+    </div>
+    <h2 class="text-xl font-bold mb-1 text-gray-800">Verification Code</h2>
+    <p class="text-xs text-gray-400 mb-6">Enter the 4-digit verification code</p>
+
+    <div class="flex justify-center gap-2 mb-6">
+      <input type="text" maxlength="1" class="otp-input w-11 h-12 text-center text-lg font-bold bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#075e54]">
+      <input type="text" maxlength="1" class="otp-input w-11 h-12 text-center text-lg font-bold bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#075e54]">
+      <input type="text" maxlength="1" class="otp-input w-11 h-12 text-center text-lg font-bold bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#075e54]">
+      <input type="text" maxlength="1" class="otp-input w-11 h-12 text-center text-lg font-bold bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#075e54]">
+    </div>
+
+    <button onclick="verifyCode()" class="w-full bg-[#075e54] text-white font-bold py-2.5 rounded-xl text-xs shadow-md hover:bg-green-800 transition">
+      Verify & Proceed
+    </button>
+  </div>
+
+  <script>
+    const inputs = document.querySelectorAll('.otp-input');
+    inputs.forEach((input, index) => {
+      input.addEventListener('input', () => {
+        if (input.value && index < inputs.length - 1) inputs[index + 1].focus();
+      });
+    });
+
+    function showAlert(title, msg) {
+      document.getElementById("modalTitle").innerText = title;
+      document.getElementById("modalMessage").innerText = msg;
+      document.getElementById("customModal").classList.remove("hidden");
+      document.getElementById("customModal").classList.add("flex");
+    }
+
+    function closeCustomModal() {
+      document.getElementById("customModal").classList.add("hidden");
+      document.getElementById("customModal").classList.remove("flex");
+    }
+
+    function verifyCode() {
+      let code = "";
+      inputs.forEach(i => code += i.value);
+      if (code.length === 4) {
+        showAlert("Verified", "Account verified successfully.");
+        setTimeout(() => { window.location.href = "home.html"; }, 1000);
+      } else {
+        showAlert("Error", "Please enter valid 4-digit code.");
+      }
+    }
+  </script>
+</body>
+</html>

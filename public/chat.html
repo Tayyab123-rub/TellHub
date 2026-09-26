@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TellHub - Chat</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="apple-touch-icon" href="/icon-512.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#075e54">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-[#efeae2] text-[#111b21] flex justify-center h-screen relative select-none font-sans">
+
+  <!-- Call Overlay Modal -->
+  <div id="callOverlay" class="fixed inset-0 bg-black/90 hidden flex-col justify-between p-6 z-50 text-white text-center">
+    <video id="ringtoneVideo" src="/ringtone.mp4" loop class="hidden" playsinline></video>
+    <div class="mt-8">
+      <div class="w-24 h-24 bg-white/20 rounded-full mx-auto flex items-center justify-center font-bold text-3xl mb-3" id="callAvatar">U</div>
+      <h2 id="callTargetName" class="font-bold text-xl">Calling...</h2>
+      <p id="callStatusText" class="text-xs text-gray-300">Ringing...</p>
+    </div>
+
+    <div id="videoContainer" class="hidden relative flex-1 my-4 bg-black rounded-xl overflow-hidden">
+      <video id="remoteVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+      <video id="localVideo" autoplay playsinline muted class="w-28 h-36 bg-gray-800 rounded-lg absolute bottom-2 right-2 object-cover border-2 border-white"></video>
+    </div>
+
+    <div class="flex justify-center items-center space-x-6 mb-8">
+      <button id="muteBtn" onclick="toggleMuteCall()" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-lg"><i class="fa-solid fa-microphone"></i></button>
+      <button id="acceptCallBtn" onclick="acceptCall()" class="w-14 h-14 bg-green-500 rounded-full hidden items-center justify-center text-xl shadow-lg animate-bounce"><i class="fa-solid fa-phone"></i></button>
+      <button onclick="endCall()" class="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center text-xl shadow-lg"><i class="fa-solid fa-phone-slash"></i></button>
+    </div>
+  </div>
+
+  <!-- Custom Alert Modal -->
+  <div id="customModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl border text-center">
+      <h3 id="modalTitle" class="font-bold text-lg text-[#075e54] mb-2">Alert</h3>
+      <p id="modalMessage" class="text-xs text-gray-600 mb-4"></p>
+      <div id="modalButtons" class="flex justify-center gap-2">
+        <button onclick="closeCustomModal()" class="bg-[#075e54] text-white px-5 py-2 rounded-xl text-xs font-bold">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule Time Selector Modal -->
+  <div id="scheduleModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl border text-center">
+      <h3 class="font-bold text-base text-[#075e54] mb-2"><i class="fa-solid fa-clock"></i> Schedule Message</h3>
+      <input type="datetime-local" id="scheduleDateTime" class="w-full border p-2 rounded-xl text-xs mb-4">
+      <div class="flex justify-center gap-2">
+        <button onclick="confirmScheduleSend()" class="bg-[#075e54] text-white px-4 py-2 rounded-xl text-xs font-bold">Schedule</button>
+        <button onclick="document.getElementById('scheduleModal').classList.add('hidden')" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-xs">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="w-full max-w-md bg-[#efeae2] border-x border-gray-200 flex flex-col h-full shadow-lg">
+    <div class="p-3 bg-[#075e54] text-white flex justify-between items-center shadow-md">
+      <div class="flex items-center space-x-3">
+        <a href="home.html" class="text-white"><i class="fa-solid fa-arrow-left"></i></a>
+        <div class="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center font-bold text-white text-sm" id="cAvatar">U</div>
+        <div>
+          <h3 id="targetName" class="font-bold text-sm text-white">User</h3>
+          <p id="userStatus" class="text-[11px] text-green-100">Offline</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button onclick="initiateCall('Audio')" class="p-1.5 hover:bg-white/10 rounded-full text-sm"><i class="fa-solid fa-phone"></i></button>
+        <button onclick="initiateCall('Video')" class="p-1.5 hover:bg-white/10 rounded-full text-sm"><i class="fa-solid fa-video"></i></button>
+        <button onclick="clearChat()" class="p-1.5 hover:bg-white/10 rounded-full text-sm text-red-200" title="Clear Chat"><i class="fa-solid fa-broom"></i></button>
+      </div>
+    </div>
+
+    <div id="messagesContainer" class="flex-1 p-4 overflow-y-auto space-y-2 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+    <!-- Attachment Preview -->
+    <div id="attachmentPreview" class="hidden p-2 bg-white border-t border-gray-200 flex justify-between items-center text-xs">
+      <span id="attachmentName" class="truncate max-w-[200px] text-[#075e54] font-bold"></span>
+      <button onclick="cancelAttachment()" class="text-red-500 font-bold ml-2"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- Input Bar -->
+    <div class="p-2 bg-[#f0f2f5] flex gap-2 items-center border-t border-gray-200">
+      <label class="text-gray-500 hover:text-[#075e54] cursor-pointer p-1.5">
+        <i class="fa-solid fa-paperclip text-base"></i>
+        <input type="file" id="fileInput" class="hidden" onchange="handleFileSelect(event)">
+      </label>
+      
+      <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)" class="flex-1 bg-white text-gray-800 px-4 py-2 rounded-full outline-none text-xs border border-gray-200">
+      
+      <button onclick="openScheduleModal()" class="text-gray-600 hover:text-[#075e54] p-1.5 text-base" title="Schedule Send">
+        <i class="fa-solid fa-clock"></i>
+      </button>
+
+      <button id="micBtn" onclick="toggleRecordAudio()" class="text-gray-600 hover:text-red-600 p-1.5 text-base">
+        <i class="fa-solid fa-microphone"></i>
+      </button>
+
+      <button onclick="sendMsg()" class="bg-[#075e54] text-white w-9 h-9 rounded-full flex items-center justify-center font-bold shadow-md hover:bg-green-800">
+        <i class="fa-solid fa-paper-plane text-xs"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    const socket = io(API_BASE, { autoConnect: true });
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const myEmail = user.email;
+    const targetEmail = localStorage.getItem("activeChatEmail");
+    const targetName = localStorage.getItem("activeChatName") || targetEmail;
+
+    let selectedFile = null;
+    let peerConnection = null;
+    let localStream = null;
+    let currentCallData = null;
+    let isMuted = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    document.getElementById("targetName").innerText = targetName;
+    document.getElementById("cAvatar").innerText = targetName.charAt(0).toUpperCase();
+
+    function openCustomAlert(title, message, buttons = null) {
+      document.getElementById("modalTitle").innerText = title;
+      document.getElementById("modalMessage").innerText = message;
+      const btnContainer = document.getElementById("modalButtons");
+      if (buttons) {
+        btnContainer.innerHTML = "";
+        buttons.forEach(b => {
+          const btn = document.createElement("button");
+          btn.innerText = b.text;
+          btn.className = b.class || "bg-[#075e54] text-white px-4 py-2 rounded-xl text-xs font-bold";
+          btn.onclick = () => { b.action(); closeCustomModal(); };
+          btnContainer.appendChild(btn);
+        });
+      }
+      document.getElementById("customModal").classList.remove("hidden");
+      document.getElementById("customModal").classList.add("flex");
+    }
+
+    function closeCustomModal() {
+      document.getElementById("customModal").classList.add("hidden");
+      document.getElementById("customModal").classList.remove("flex");
+    }
+
+    async function fetchChatHistory() {
+      try {
+        const res = await fetch(`${API_BASE}/api/messages?sender=${myEmail}&receiver=${targetEmail}`);
+        const data = await res.json();
+        if (data.success) {
+          const container = document.getElementById("messagesContainer");
+          container.innerHTML = "";
+          data.messages.forEach(msg => appendMessage(msg));
+        }
+      } catch (err) {}
+    }
+
+    if (navigator.onLine) {
+      socket.emit('register', myEmail);
+      socket.emit('check_status', targetEmail);
+      fetchChatHistory();
+    }
+
+    socket.on('status_response', (data) => { if (data.email === targetEmail) updateStatusUI(data.status); });
+    socket.on('user_status_change', (data) => { if (data.email === targetEmail) updateStatusUI(data.status); });
+
+    function updateStatusUI(status) {
+      document.getElementById("userStatus").innerText = status === 'Online' ? 'Online' : 'Offline';
+    }
+
+    // Handles Any Type of File (Image, Video, Audio, PDF, Documents)
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        let type = 'document';
+        if (file.type.startsWith('image/')) type = 'image';
+        else if (file.type.startsWith('video/')) type = 'video';
+        else if (file.type.startsWith('audio/')) type = 'audio';
+
+        selectedFile = { data: evt.target.result, name: file.name, type: type };
+        document.getElementById("attachmentName").innerText = file.name;
+        document.getElementById("attachmentPreview").classList.remove("hidden");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function cancelAttachment() {
+      selectedFile = null;
+      document.getElementById("fileInput").value = "";
+      document.getElementById("attachmentPreview").classList.add("hidden");
+    }
+
+    function handleKeyPress(e) { if (e.key === 'Enter') sendMsg(); }
+
+    function sendMsg(scheduledAt = null) {
+      const input = document.getElementById("msgInput");
+      const text = input.value.trim();
+      if (!text && !selectedFile) return;
+
+      const payload = {
+        senderEmail: myEmail,
+        receiverEmail: targetEmail,
+        message: text,
+        fileData: selectedFile ? selectedFile.data : null,
+        fileType: selectedFile ? selectedFile.type : 'none',
+        fileName: selectedFile ? selectedFile.name : '',
+        scheduledAt: scheduledAt
+      };
+
+      socket.emit('send_message', payload);
+      input.value = "";
+      cancelAttachment();
+    }
+
+    function openScheduleModal() {
+      document.getElementById("scheduleModal").classList.remove("hidden");
+      document.getElementById("scheduleModal").classList.add("flex");
+    }
+
+    function confirmScheduleSend() {
+      const dateVal = document.getElementById("scheduleDateTime").value;
+      if (!dateVal) return alert("Select schedule time!");
+      sendMsg(dateVal);
+      document.getElementById("scheduleModal").classList.add("hidden");
+      openCustomAlert("Scheduled", "Message scheduled for " + new Date(dateVal).toLocaleString());
+    }
+
+    socket.on('message_scheduled', (res) => { openCustomAlert("Scheduled", res.message); });
+
+    socket.on('receive_message', (msg) => {
+      if ((msg.senderEmail === myEmail && msg.receiverEmail === targetEmail) ||
+          (msg.senderEmail === targetEmail && msg.receiverEmail === myEmail)) {
+        appendMessage(msg);
+      }
+    });
+
+    function appendMessage(msg) {
+      const container = document.getElementById("messagesContainer");
+      const isMine = msg.senderEmail === myEmail;
+
+      if (msg.fileType === 'call_log') {
+        const centerDiv = document.createElement("div");
+        centerDiv.className = "flex justify-center my-2";
+        centerDiv.innerHTML = `<div class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 shadow-sm border border-gray-300"><i class="fa-solid fa-phone text-[#075e54]"></i> ${msg.message}</div>`;
+        container.appendChild(centerDiv);
+        container.scrollTop = container.scrollHeight;
+        return;
+      }
+
+      const div = document.createElement("div");
+      div.id = `msg-${msg._id}`;
+      div.className = `flex ${isMine ? 'justify-end' : 'justify-start'} group`;
+
+      let contentHtml = '';
+      if (msg.fileType === 'image') {
+        contentHtml = `<img src="${msg.fileData}" class="max-w-xs rounded-lg mb-1">`;
+      } else if (msg.fileType === 'video') {
+        contentHtml = `<video controls src="${msg.fileData}" class="max-w-xs rounded-lg mb-1"></video>`;
+      } else if (msg.fileType === 'document') {
+        contentHtml = `<a href="${msg.fileData}" download="${msg.fileName}" class="underline text-xs text-[#075e54] font-bold block mb-1"><i class="fa-solid fa-file"></i> ${msg.fileName}</a>`;
+      } else if (msg.fileType === 'audio') {
+        contentHtml = `<audio controls src="${msg.fileData}" class="w-48 h-8 my-1"></audio>`;
+      }
+
+      const isDeletedText = msg.isDeleted ? "This message was deleted" : (msg.message || '');
+      contentHtml += `<p class="msg-text text-xs text-gray-800">${isDeletedText}</p>`;
+
+      div.innerHTML = `
+        <div class="${isMine ? 'bg-[#dcf8c6]' : 'bg-white'} px-3 py-1.5 rounded-xl max-w-[75%] shadow-sm border border-gray-100 relative">
+          ${contentHtml}
+          <div class="flex justify-between items-center mt-1 text-[9px] text-gray-400 gap-2">
+            <span>${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            <button onclick="promptDelete('${msg._id}', ${isMine})" class="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-600"><i class="fa-solid fa-trash text-[10px]"></i></button>
+          </div>
+        </div>
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function toggleRecordAudio() {
+      const micBtn = document.getElementById("micBtn");
+      if (!isRecording) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            socket.emit('send_message', {
+              senderEmail: myEmail,
+              receiverEmail: targetEmail,
+              fileData: reader.result,
+              fileType: 'audio',
+              fileName: 'Voice_Note.webm'
+            });
+          };
+          reader.readAsDataURL(blob);
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        micBtn.classList.add("text-red-600", "animate-pulse");
+      } else {
+        mediaRecorder.stop();
+        isRecording = false;
+        micBtn.classList.remove("text-red-600", "animate-pulse");
+      }
+    }
+
+    function promptDelete(msgId, isMine) {
+      const btns = [
+        { text: "Delete for Me", action: () => deleteMsg(msgId, 'me') },
+        { text: "Cancel", class: "bg-gray-300 text-gray-800 px-3 py-1.5 rounded-xl text-xs", action: closeCustomModal }
+      ];
+      if (isMine) btns.unshift({ text: "Delete for Everyone", class: "bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold", action: () => deleteMsg(msgId, 'everyone') });
+      openCustomAlert("Delete Message", "Choose delete option:", btns);
+    }
+
+    async function deleteMsg(msgId, deleteType) {
+      await fetch(`${API_BASE}/api/delete-message`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ messageId: msgId, myEmail, deleteType })
+      });
+      fetchChatHistory();
+    }
+
+    async function clearChat() {
+      openCustomAlert("Clear Chat", "Clear all messages in this chat?", [
+        { text: "Clear All", class: "bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold", action: async () => {
+            await fetch(`${API_BASE}/api/clear-chat`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ myEmail, targetEmail })
+            });
+            fetchChatHistory();
+        }},
+        { text: "Cancel", class: "bg-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs", action: closeCustomModal }
+      ]);
+    }
+
+    // Call Signalling Logic
+    async function initiateCall(type) {
+      currentCallData = { callerEmail: myEmail, callerName: user.name, targetEmail, targetName, callType: type };
+      document.getElementById("callTargetName").innerText = targetName;
+      document.getElementById("callStatusText").innerText = `Outgoing ${type} Call...`;
+      document.getElementById("callOverlay").classList.remove("hidden");
+      document.getElementById("callOverlay").classList.add("flex");
+      socket.emit('call_user', currentCallData);
+    }
+
+    socket.on('incoming_call', (data) => {
+      currentCallData = data;
+      document.getElementById("callTargetName").innerText = data.callerName;
+      document.getElementById("callStatusText").innerText = `Incoming ${data.callType} Call...`;
+      document.getElementById("acceptCallBtn").classList.remove("hidden");
+      document.getElementById("acceptCallBtn").classList.add("flex");
+      document.getElementById("callOverlay").classList.remove("hidden");
+      document.getElementById("callOverlay").classList.add("flex");
+    });
+
+    async function acceptCall() {
+      document.getElementById("acceptCallBtn").classList.add("hidden");
+      document.getElementById("callStatusText").innerText = "Connected";
+      socket.emit('accept_call', currentCallData);
+      startWebRTC();
+    }
+
+    socket.on('call_accepted', () => {
+      document.getElementById("callStatusText").innerText = "Connected";
+      startWebRTC();
+    });
+
+    socket.on('call_rejected', () => { endCallUI(); });
+    socket.on('call_ended', () => { endCallUI(); });
+
+    async function startWebRTC() {
+      const isVideo = currentCallData.callType === 'Video';
+      if (isVideo) document.getElementById("videoContainer").classList.remove("hidden");
+
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: isVideo });
+      document.getElementById("localVideo").srcObject = localStream;
+
+      peerConnection = new RTCPeerConnection();
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      peerConnection.ontrack = (e) => { document.getElementById("remoteVideo").srcObject = e.streams[0]; };
+      peerConnection.onicecandidate = (e) => {
+        if (e.candidate) socket.emit('webrtc_signal', { targetEmail: currentCallData.callerEmail === myEmail ? currentCallData.targetEmail : currentCallData.callerEmail, signal: { candidate: e.candidate } });
+      };
+
+      if (currentCallData.callerEmail === myEmail) {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('webrtc_signal', { targetEmail: currentCallData.targetEmail, signal: { offer } });
+      }
+    }
+
+    socket.on('webrtc_signal', async (data) => {
+      if (data.signal.offer) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal.offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('webrtc_signal', { targetEmail: data.senderEmail, signal: { answer } });
+      } else if (data.signal.answer) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal.answer));
+      } else if (data.signal.candidate) {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+      }
+    });
+
+    function endCall() {
+      socket.emit('end_call', { targetEmail: currentCallData.callerEmail === myEmail ? currentCallData.targetEmail : currentCallData.callerEmail });
+      endCallUI();
+    }
+
+    function endCallUI() {
+      if (localStream) localStream.getTracks().forEach(t => t.stop());
+      if (peerConnection) peerConnection.close();
+      document.getElementById("callOverlay").classList.add("hidden");
+      document.getElementById("callOverlay").classList.remove("flex");
+      document.getElementById("videoContainer").classList.add("hidden");
+    }
+  </script>
+</body>
+</html>
